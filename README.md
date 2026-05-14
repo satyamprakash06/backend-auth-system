@@ -312,10 +312,10 @@ LOGOUT:
 
 ## 👨‍💻 Author
 
-**Satya**
-- GitHub: [@yourusername](https://github.com/satyamprakash06)
-- LinkedIn: [your-linkedin](https://linkedin.com/in/satyamprakash06)
-- Twitter/X: [@yourhandle](https://x.com/satyamdotcom)
+**Satyam Prakash**
+- GitHub: [@satyamprakash06](https://github.com/satyamprakash06)
+- LinkedIn: [satyamprakash06](https://linkedin.com/in/satyamprakash06)
+- Twitter/X: [@satyamdotcom](https://x.com/satyamdotcom)
 
 ---
 
