@@ -100,6 +100,11 @@ const forgetPassword = async (email)=>{
     await user.save({validateBeforeSave:false});
 
     // TODO: send reset email with rawToken
+     try {
+        await sendVerificationEmail(email, rawToken);
+    }catch(error){
+        console.error(error)
+    }
 
     return{message: "Reset link sent to your email"}
 
