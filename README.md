@@ -1,6 +1,6 @@
-# 🚀 RESTful API — Node.js Backend
+# 🔐 RESTful API — Complete Authentication System
 
-A production-ready RESTful API built with Node.js, Express, and MongoDB featuring a complete JWT authentication system.
+A production-ready RESTful API built with Node.js, Express, and MongoDB featuring a fully secure JWT authentication system with email verification, token rotation, and role-based access control.
 
 ---
 
@@ -13,23 +13,38 @@ A production-ready RESTful API built with Node.js, Express, and MongoDB featurin
 - [Environment Variables](#environment-variables)
 - [API Endpoints](#api-endpoints)
 - [Authentication Flow](#authentication-flow)
-- [Security](#security)
+- [Security Measures](#security-measures)
+- [Error Handling](#error-handling)
 
 ---
 
 ## ✨ Features
 
+### Auth
 - ✅ User registration with email verification
-- ✅ JWT authentication (access + refresh tokens)
+- ✅ Login with JWT access + refresh tokens
+- ✅ Logout with token invalidation
 - ✅ Refresh token rotation
+- ✅ Forgot password with reset email
+- ✅ Get current user profile
+
+### Security
+- ✅ Password hashing with bcrypt (12 salt rounds)
+- ✅ Refresh tokens hashed (SHA256) before saving to DB
+- ✅ HTTP-only, secure, sameSite cookies
+- ✅ Token rotation on every refresh
+- ✅ Email verification before login
 - ✅ Role-based access control (customer, seller, admin)
-- ✅ Forgot password & reset password flow
-- ✅ HTTP-only cookie token delivery
-- ✅ Request validation with Joi DTOs
-- ✅ Password hashing with bcrypt
-- ✅ Email service with Nodemailer
-- ✅ Global error handling middleware
-- ✅ Clean service/controller architecture
+- ✅ Sensitive fields hidden with `select: false`
+- ✅ Rollback on email failure
+
+### Code Quality
+- ✅ Clean service / controller architecture
+- ✅ Joi validation with DTOs
+- ✅ Custom ApiError & ApiResponse classes
+- ✅ Global error handler middleware
+- ✅ asyncHandler utility — no repetitive try/catch
+- ✅ Consistent response format across all endpoints
 
 ---
 
@@ -40,14 +55,14 @@ A production-ready RESTful API built with Node.js, Express, and MongoDB featurin
 | Node.js | Runtime environment |
 | Express.js | Web framework |
 | MongoDB | Database |
-| Mongoose | ODM for MongoDB |
-| JSON Web Token | Authentication |
+| Mongoose | ODM — schema, hooks, methods |
+| jsonwebtoken | JWT access & refresh tokens |
 | bcryptjs | Password hashing |
 | Joi | Request validation |
-| Nodemailer | Email service |
-| cookie-parser | Cookie handling |
-| dotenv | Environment variables |
-| crypto | Token hashing |
+| Nodemailer | Email service (verification & reset) |
+| cookie-parser | Cookie parsing middleware |
+| dotenv | Environment variable management |
+| crypto (built-in) | SHA256 token hashing |
 
 ---
 
@@ -56,33 +71,35 @@ A production-ready RESTful API built with Node.js, Express, and MongoDB featurin
 ```
 backend/
 ├── src/
-│   ├── app.js                        # Express app setup
+│   ├── app.js                             # Express app, middleware setup
 │   ├── common/
 │   │   ├── config/
-│   │   │   └── db.js                 # MongoDB connection
+│   │   │   ├── db.js                      # MongoDB connection
+│   │   │   └── email.js                   # Nodemailer transporter + sendMail
 │   │   ├── dto/
-│   │   │   └── base.dto.js           # Base DTO with Joi validation
+│   │   │   └── base.dto.js                # Base DTO — Joi validation logic
 │   │   ├── middleware/
-│   │   │   ├── auth.middleware.js    # authenticate & authorize
-│   │   │   ├── validation.middleware.js  # request validation
-│   │   │   └── error.middleware.js   # global error handler
+│   │   │   ├── auth.middleware.js          # authenticate & authorize
+│   │   │   ├── validation.middleware.js    # request validation middleware
+│   │   │   └── error.middleware.js         # global error handler
 │   │   └── utils/
-│   │       ├── api-error.js          # custom error class
-│   │       ├── api-response.js       # consistent response helper
-│   │       ├── async-handler.js      # async error wrapper
-│   │       ├── jwt.utils.js          # token generation & verification
-│   │       └── email.utils.js        # nodemailer email service
+│   │       ├── api-error.js               # custom ApiError class
+│   │       ├── api-response.js            # consistent response helper
+│   │       ├── async-handler.js           # async error wrapper
+│   │       └── jwt.utils.js               # token generation & verification
 │   └── features/
 │       └── auth/
-│           ├── auth.model.js         # User mongoose schema
-│           ├── auth.service.js       # business logic
-│           ├── auth.controller.js    # request/response handling
-│           ├── auth.router.js        # route definitions
+│           ├── auth.model.js              # User schema + pre-save hook + comparePassword
+│           ├── auth.service.js            # all 7 business logic functions
+│           ├── auth.controller.js         # all 7 HTTP controllers
+│           ├── auth.router.js             # route definitions
 │           └── dto/
-│               └── register.dto.js  # registration validation rules
-├── server.js                         # entry point
-├── .env                              # environment variables
-├── .env.example                      # environment variable template
+│               ├── register.dto.js        # register validation rules
+│               ├── login.dto.js           # login validation rules
+│               └── forgetPassword.dto.js  # forgot password validation rules
+├── server.js                              # entry point — DB connect + server start
+├── .env                                   # environment variables (never commit!)
+├── .env.example                           # environment variable template
 ├── .gitignore
 └── package.json
 ```
@@ -96,6 +113,7 @@ backend/
 - Node.js v18+
 - MongoDB (local or Atlas)
 - npm or yarn
+- SMTP credentials (Gmail, Mailtrap, etc.)
 
 ### Installation
 
@@ -114,7 +132,7 @@ npm install
 ```bash
 cp .env.example .env
 ```
-Fill in your values in the `.env` file (see [Environment Variables](#environment-variables))
+Fill in your values in `.env`
 
 **4. Start the server:**
 ```bash
@@ -125,13 +143,11 @@ npm run dev
 npm start
 ```
 
-Server runs at `http://localhost:4000`
+Server runs at `http://localhost:4000` ✅
 
 ---
 
 ## 🔐 Environment Variables
-
-Create a `.env` file in the root directory:
 
 ```dotenv
 # Server
@@ -142,9 +158,9 @@ NODE_ENV=development
 MONGODB_URI=mongodb://localhost:27017/yourdbname
 
 # JWT
-JWT_ACCESS_SECRET=your_access_token_secret
+JWT_ACCESS_SECRET=your_strong_access_secret
 JWT_ACCESS_EXPIRES_IN=15m
-JWT_REFRESH_SECRET=your_refresh_token_secret
+JWT_REFRESH_SECRET=your_strong_refresh_secret
 JWT_REFRESH_EXPIRES_IN=7d
 
 # Email (SMTP)
@@ -157,23 +173,39 @@ SMTP_FROM_EMAIL=your_email@gmail.com
 CLIENT_URL=http://localhost:3000
 ```
 
-> ⚠️ Never commit your `.env` file to GitHub. It's already in `.gitignore`.
+> ⚠️ Never commit `.env` to GitHub. Use `.env.example` as a template.
+
+**Recommended SMTP providers:**
+
+| Provider | Best for |
+|---|---|
+| Mailtrap | Development & testing 🧪 |
+| Gmail | Small projects |
+| Resend | Production (modern) |
+| SendGrid | Production at scale |
 
 ---
 
 ## 📡 API Endpoints
 
-### Auth Routes — `/api/auth`
+Base URL: `/api/auth`
 
-| Method | Endpoint | Description | Auth Required |
+### Public Routes
+
+| Method | Endpoint | Description | Body |
 |---|---|---|---|
-| POST | `/register` | Register new user | ❌ |
-| POST | `/login` | Login user | ❌ |
-| POST | `/logout` | Logout user | ✅ |
-| POST | `/refresh` | Refresh access token | ❌ |
-| POST | `/forgot-password` | Send reset email | ❌ |
-| POST | `/reset-password` | Reset password | ❌ |
-| GET | `/profile` | Get user profile | ✅ |
+| POST | `/register` | Register new user | `name, email, password, role` |
+| POST | `/login` | Login user | `email, password` |
+| POST | `/refresh` | Refresh access token | cookie: `refreshToken` |
+| GET | `/verify/:token` | Verify email address | token in URL |
+| POST | `/forgot-password` | Send password reset email | `email` |
+
+### Protected Routes (login required)
+
+| Method | Endpoint | Description | Header |
+|---|---|---|---|
+| GET | `/me` | Get current user profile | `Authorization: Bearer <token>` |
+| POST | `/logout` | Logout user | `Authorization: Bearer <token>` |
 
 ---
 
@@ -232,19 +264,148 @@ Content-Type: application/json
   }
 }
 ```
-> Refresh token is set automatically as an HTTP-only cookie 🍪
+> 🍪 `refreshToken` is automatically set as an HTTP-only cookie
+
+---
+
+**Forgot Password**
+```http
+POST /api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "priya@example.com"
+}
+```
+```json
+{
+  "success": true,
+  "message": "If this email exists you will receive a reset link"
+}
+```
+> 🔒 Same response whether email exists or not — prevents email enumeration attacks
 
 ---
 
 **Protected Route**
 ```http
-GET /api/auth/profile
+GET /api/auth/me
 Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+```
+```json
+{
+  "success": true,
+  "message": "User Profile",
+  "data": {
+    "name": "Priya Kumar",
+    "email": "priya@example.com",
+    "role": "customer",
+    "isVerified": true
+  }
+}
 ```
 
 ---
 
-### Error Responses
+## 🔄 Authentication Flow
+
+### Registration & Email Verification
+```
+POST /register
+      ↓
+Validate input (Joi DTO)
+      ↓
+Check duplicate email
+      ↓
+Hash password (bcrypt, 12 rounds)
+      ↓
+Generate verificationToken (SHA256 hashed → saved in DB)
+      ↓
+Send verification email with rawToken 📧
+  fails? → rollback token → throw 500
+      ↓
+Return clean user (no password, no token)
+
+GET /verify/:token
+      ↓
+Hash rawToken → compare with DB
+      ↓
+isVerified = true, clear token
+      ↓
+User can now login ✅
+```
+
+### Login & Token Flow
+```
+POST /login
+      ↓
+Find user → comparePassword() → check isVerified
+      ↓
+Generate accessToken (15m) + refreshToken (7d)
+      ↓
+Hash refreshToken → save to DB
+      ↓
+accessToken  → response body
+refreshToken → HTTP-only cookie 🍪
+
+Every Protected Request:
+Authorization: Bearer accessToken
+      ↓
+authenticate middleware → verify JWT → attach req.user
+      ↓
+Controller runs ✅
+
+POST /refresh (when access token expires)
+      ↓
+Verify refreshToken + compare hash in DB
+      ↓
+Generate NEW tokens → save new hash
+      ↓
+Old token invalidated 🔒 → return new tokens ✅
+```
+
+### Forgot Password Flow
+```
+POST /forgot-password { email }
+      ↓
+Find user (vague response if not found 🔒)
+      ↓
+Generate resetToken → save hash + 15min expiry to DB
+      ↓
+Send reset email 📧
+  fails? → rollback → throw 500
+      ↓
+User clicks link → POST /reset-password { token, newPassword }
+      ↓
+Hash token → find user → check expiry
+      ↓
+Hash new password → save → clear reset fields
+      ↓
+Password reset ✅
+```
+
+---
+
+## 🔒 Security Measures
+
+| Measure | Implementation | Protects Against |
+|---|---|---|
+| Password hashing | bcryptjs 12 rounds | Plain text exposure |
+| Token hashing | SHA256 before DB save | Token theft from DB |
+| Token rotation | New refresh token each use | Token replay attacks |
+| HTTP-only cookies | `httpOnly: true` | XSS attacks |
+| Secure cookies | `secure: true` | Network interception |
+| SameSite cookies | `sameSite: "strict"` | CSRF attacks |
+| `select: false` | Sensitive DB fields hidden | Accidental data leaks |
+| Vague error messages | Same response for missing email | Email enumeration |
+| Email rollback | Undo DB changes if email fails | Orphaned tokens in DB |
+| Short access token | Expires in 15 minutes | Token theft damage |
+| Input validation | Joi DTOs on all routes | Invalid/malicious input |
+| Role-based access | `authorize()` middleware | Privilege escalation |
+
+---
+
+## ⚠️ Error Handling
 
 All errors follow a consistent format:
 
@@ -255,58 +416,14 @@ All errors follow a consistent format:
 }
 ```
 
-| Status Code | Meaning |
-|---|---|
-| 400 | Bad Request — invalid/missing input |
-| 401 | Unauthorized — not logged in or invalid token |
-| 403 | Forbidden — logged in but no permission |
-| 404 | Not Found — resource doesn't exist |
-| 409 | Conflict — resource already exists |
-| 500 | Internal Server Error |
-
----
-
-## 🔄 Authentication Flow
-
-```
-REGISTER:
-  POST /register → validate → hash password
-  → generate verification token → send email → save user
-
-LOGIN:
-  POST /login → validate → check password
-  → check isVerified → generate tokens
-  → save hashed refresh token → return tokens
-
-PROTECTED REQUEST:
-  Request + Bearer token → verify JWT
-  → find user → attach req.user → proceed
-
-TOKEN REFRESH:
-  POST /refresh + cookie → verify refresh token
-  → compare hash → rotate tokens → return new tokens
-
-LOGOUT:
-  POST /logout → clear refresh token in DB
-  → clear cookies → session ended
-```
-
----
-
-## 🔒 Security
-
-| Measure | Implementation |
-|---|---|
-| Password hashing | bcryptjs with 12 salt rounds |
-| Token storage | Refresh tokens hashed (SHA256) before saving |
-| Token rotation | New refresh token generated on every refresh |
-| HTTP-only cookies | Prevents JavaScript access (XSS protection) |
-| Secure cookies | HTTPS only in production |
-| Field hiding | `select: false` on sensitive DB fields |
-| Input validation | Joi validation on all incoming requests |
-| Unknown field stripping | `stripUnknown: true` in Joi config |
-| Role-based access | authorize() middleware checks user role |
-| Token expiry | Access: 15m / Refresh: 7d |
+| Status Code | Type | When |
+|---|---|---|
+| 400 | Bad Request | Invalid or missing input |
+| 401 | Unauthorized | Not logged in / invalid token |
+| 403 | Forbidden | Logged in but no permission |
+| 404 | Not Found | Resource doesn't exist |
+| 409 | Conflict | Email already registered |
+| 500 | Internal Server Error | Unexpected server error |
 
 ---
 
@@ -326,3 +443,4 @@ This project is open source and available under the [MIT License](LICENSE).
 ---
 
 > Built while learning backend development step by step 🚀
+> Every line of code understood — not just copy-pasted. 
