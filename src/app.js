@@ -14,7 +14,7 @@ app.use(cookieParser())
 
 
 
-
+// file upload using multer
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -27,9 +27,19 @@ const storage = multer.diskStorage({
   }
 })
 
-
-
-const upload = multer({storage});
+const upload = multer({storage, limits:{
+  fileSize:1024*1024*2
+},
+ fileFilter:(req, res, cb)=>{
+  const allowed =["image/png","image/jpeg", "application/pdf"]
+  if(allowed.includes(file.mimetype)){
+    cb(null, true)
+  }
+  else{
+    cb(new Error("file type not Supported"), false)
+  } 
+ }
+});
 
 app.post("/upload", upload.single("files"), (req, res) => {
     console.log(req.files);
