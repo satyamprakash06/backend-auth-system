@@ -3,7 +3,7 @@ import joi from "joi"
 class BaseDto {
     static schema = joi.object({})
 
-    static validation(data){
+    static validate(data){
         const{error, value} = this.schema.validate(data, {
             abortEarly:false,
             stripUnknown: true

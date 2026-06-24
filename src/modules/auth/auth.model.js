@@ -32,6 +32,13 @@ const userSchema = new mongoose.Schema({
         type:Boolean,
         default:false
     },
+
+    avatar:{
+        type:String,
+        default:false
+    },
+
+
     verificationToken:{type:String, select:false},
     refreshToken:{type:String, select:false},
     resetPasswordToken:{type:String, select:false},
@@ -40,9 +47,8 @@ const userSchema = new mongoose.Schema({
 
 userSchema.pre("save", async function(next){
     if(!this.isModified("password"))
-        return next();
+        return;
     this.password = await bcrypt.hash(this.password, 12);
-    next();
 });
 
 userSchema.methods.comparePassword = async function(clearTextPassword){

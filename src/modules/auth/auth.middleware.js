@@ -5,7 +5,7 @@ import {verifyAccessToken} from "../../common/utils/jwt.utils.js";
 
 const authenticate = async (req, res, next)=>{
     let token;
-    if(req.header.authorization?.startsWith("Bearer")){
+    if(req.headers.authorization?.startsWith("Bearer")){
         token = req.headers.authorization.split(" ")[1]
     }
     if(!token) throw ApiError.unauthorized("Not Authenticated")

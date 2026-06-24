@@ -3,6 +3,8 @@ import {generateAccessToken, generateRefreshToken, generateResetToken, verifyRef
 import User from "./auth.model.js"
 import {sendMail, sendVerificationEmail} from "../../common/config/email.js"
 import crypto from "crypto"
+import fs from "node:fs"
+import imagekit from "../../common/config/imageKit.js"
 
 
 const hashToken = (token)=>crypto.createHash("sha256").update(token).digest("hex");
@@ -47,9 +49,9 @@ const login = async ({email, password}) =>{
         const isMatch = await user.comparePassword(password);
         if(!isMatch) throw ApiError.unauthorized("Invalid email or password");
 
-    if(! user.isVerified){
-        throw ApiError.forbidden("please verify your email before login");
-    }
+    // if(! user.isVerified){
+    //     throw ApiError.forbidden("please verify your email before login");
+    // }
     
     const accessToken = generateAccessToken({id:user._id, role:user.role});
     const refreshToken = generateRefreshToken({id:user._id})
@@ -126,5 +128,37 @@ const verifyEmail = async (token) =>{
     return user;
 };
 
+const avatarUpload = async (userId, file) =>{
+    try {
+        const filestream = fs.createReadStream(file.path);
+        const uploadResponse = await imagekit.files.upload({
+            file:filestream,
+            fileName:file.filename,
+            folder:"/user-avatars"
+        })
 
-export {register, login, refresh, logout, forgetPassword, getme, verifyEmail}
+        await User.findByIdAndUpdate(
+            userId,
+            {avatar:uploadResponse.url},
+            {new: true}
+        )
+        fs.unlinkSync(file.path);
+        return{
+            url: uploadResponse.url,
+            fileID:uploadResponse.fileId
+        }
+    } catch (error) {
+       try{
+        if(file.path && fs.existsSync(file.path)){
+            fs.unlinkSync(file.path);
+        }
+
+       } catch(error){
+        console.error("Error deleting tempfile:", error);
+       }
+       throw error;
+    }
+}
+
+
+export {register, login, refresh, logout, forgetPassword, getme, verifyEmail,avatarUpload}
